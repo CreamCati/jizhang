@@ -1,0 +1,53 @@
+
+name: Build 记账 APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build APK
+        run: |
+          if [ -f settings.gradle ] || [ -f settings.gradle.kts ]; then
+            gradle assembleDebug
+          elif [ -f jizhang-app/settings.gradle ] || [ -f jizhang-app/settings.gradle.kts ]; then
+            cd jizhang-app
+            gradle assembleDebug
+          else
+            echo "Android project not found"
+            find . -maxdepth 3 \( -name settings.gradle -o -name settings.gradle.kts \)
+            exit 1
+          fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: jizhang-apk
+          path: |
+            **/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
